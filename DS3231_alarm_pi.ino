@@ -1,3 +1,8 @@
+// ******* Please update the DateTime for when the alarm will ring
+// ******* Please update the frequency of alarms: TimeSpan(0, 24, 0, 0) 24 Hours
+
+
+
 /* Example implementation of an alarm using DS3231
  *
  * VCC and GND of RTC should be connected to some power source
