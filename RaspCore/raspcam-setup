@@ -1,0 +1,4 @@
+#!/bin/bash
+# Run by sudo 
+mv RunAToZ.sh /etc/network/if-up.d/z999-RaspCamScript
+crontab crontab.conf
