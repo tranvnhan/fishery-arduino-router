@@ -8,6 +8,7 @@
  */
 
 #include "misc.h"
+#include "config_manager.h"
 
 RTC_DS3231 rtc;
 
@@ -16,20 +17,31 @@ extern bool isRaspOn;
 extern unsigned int cntWaitForRouterOn;
 extern unsigned int cntNumRaspOn;
 
+extern DateTime startTime;
+extern TimeSpan onRaspDuration;
+extern TimeSpan offRaspDuration;
+
 void setup() {
 
     Serial.begin(9600);
+    Serial.flush();
     
     pinMode(RouterPin, OUTPUT);
     pinMode(RaspPin, OUTPUT);
+    pinMode(STATUS_LED, OUTPUT);
 
     initOnNewDay();
-
+    initI2CEEPROM();
+    
     // initializing the rtc
-    if(!rtc.begin()) {      
-        Serial.flush();
-        SerialDebugPrint("Couldn't find RTC!\n");
-        while (1) delay(10);
+    if(!rtc.begin()) {              
+        SerialDebugPrint("Couldn't find RTC!\r\n");
+        while (1) {
+          digitalWrite(STATUS_LED, HIGH);
+          delay(1000);
+          digitalWrite(STATUS_LED, LOW);
+          delay(1000);
+        }
     }
 
     #ifdef ADJUST_RTC_TIME   
@@ -54,42 +66,23 @@ void setup() {
     // stop oscillating signals at SQW Pin
     // otherwise setAlarm1 will fail
     rtc.writeSqwPinMode(DS3231_OFF);
+    
+    loadConfigFromEEPROM();
 
-    if(!rtc.setAlarm1(
-          startTime,
-          DS3231_A1_Hour // this mode triggers the alarm when the seconds match. See Doxygen for other options
-    )) {
-        SerialDebugPrint("Error, alarm wasn't set!\n");
-    }else {
-        SerialDebugPrint("Alarm will happen at " + DateTimeToString(startTime) + "\n");
-    }
+    digitalWrite(STATUS_LED, HIGH);
+    delay(500);
+    digitalWrite(STATUS_LED, LOW);
  
 }
 
 void loop() {
-    // print current time
+              
+    /* print current time
     char date[10] = "hh:mm:ss";
     rtc.now().toString(date);
-    Serial.print(date);
-    // the value at SQW-Pin (because of pullup 1 means no alarm)
-    Serial.print(" SQW: ");
-    Serial.print(digitalRead(InterruptPin));
-    // whether a alarm happened happened
-    Serial.print(" Alarm1: ");
-    Serial.print(rtc.alarmFired(1));
-    Serial.print("\n");
-    
-    Serial.print(" Alarm2: ");
-    Serial.print(rtc.alarmFired(2));
-    Serial.print("\n"); 
-    // Serial.print(" Alarm2: ");
-    // Serial.println(rtc.alarmFired(2));
-    // control register values (see https://datasheets.maximintegrated.com/en/ds/DS3231.pdf page 13)
-    // Serial.print(" Control: 0b");
-    // Serial.println(read_i2c_register(DS3231_ADDRESS, DS3231_CONTROL), BIN);
+    */
 
     // resetting SQW and alarm 1 flag
-
     // using setAlarm1, the next alarm could now be configurated
     if(rtc.alarmFired(1)) {
 
@@ -98,9 +91,9 @@ void loop() {
           //Delay for routerOn, internet on
           while (cntWaitForRouterOn++ < WAITING_TIME_FOR_ROUTER) {
             delay(1000);
-            Serial.print("Wait for the router ... ");
-            Serial.print(cntWaitForRouterOn);
-            Serial.println();
+            SerialDebugPrint("Wait for the router ... ");
+            SerialDebugPrint(cntWaitForRouterOn);
+            SerialDebugPrint("\r\n");            
           }
 
           digitalWrite(RaspPin, HIGH);
@@ -115,14 +108,14 @@ void loop() {
             if (cntNumRaspOn < NUM_RUNNING_CYCLES) {
               //Set Alarm1 to OFF the Ras after onRaspDuration
               DateTime alarm1Time = rtc.now() + onRaspDuration;
-              Serial.println("Alarm1 is set to " + DateTimeToString(alarm1Time) + " OFF Rasp");
+              SerialDebugPrint("Alarm1 is set to " + DateTimeToString(alarm1Time) + " OFF Rasp\r\n");
               rtc.setAlarm1(alarm1Time, DS3231_A1_Hour);    
             } else {
               // Initialize for new day
               initOnNewDay();
               //Set timer for the following days, same as (hour, minute) in startTime
               DateTime alarm1Time = startTime;
-              Serial.println("Alarm1 is set to " + DateTimeToString(alarm1Time) + " ON Rasp");
+              SerialDebugPrint("Alarm1 is set to " + DateTimeToString(alarm1Time) + " ON Rasp\r\n");
               rtc.setAlarm1(alarm1Time, DS3231_A1_Hour);    
             }
 
@@ -130,13 +123,13 @@ void loop() {
          else {
             //Set Alarm1 to ON the Ras after offRaspDuration
             DateTime alarm1Time = rtc.now() + offRaspDuration;
-            Serial.println("Alarm1 is set to " + DateTimeToString(alarm1Time) + " ON Rasp");
+            SerialDebugPrint("Alarm1 is set to " + DateTimeToString(alarm1Time) + " ON Rasp\r\n");
             rtc.setAlarm1(alarm1Time, DS3231_A1_Hour);    
          }
          
     }
-
-    delay(1000);
+    SerialReadCmdRoutine();
+    //delay(1000);
 }
 
 void onAlarm() {
@@ -144,7 +137,7 @@ void onAlarm() {
     if(isRouterOn == false){
       isRouterOn = true; 
       digitalWrite(RouterPin, HIGH);
-      Serial.println("ON_Router Relay 1");    
+      SerialDebugPrint("ON_Router Relay 1\n");    
     }
     else
     {
@@ -152,16 +145,16 @@ void onAlarm() {
       if (isRaspOn)  {
           isRaspOn = false; 
           digitalWrite(RaspPin, LOW);
-          Serial.println("OFF_RaspPin Relay 2");          
+          SerialDebugPrint("OFF_RaspPin Relay 2\n");          
         }
       else {
           isRaspOn = true; 
           digitalWrite(RaspPin, HIGH);
-          Serial.println("ON_RaspPin Relay 2");   
+          SerialDebugPrint("ON_RaspPin Relay 2\n");   
           cntNumRaspOn++;
-          Serial.print("NumRaspOn ");
-          Serial.print(cntNumRaspOn);
-          Serial.println();
+          SerialDebugPrint("NumRaspOn ");
+          SerialDebugPrint(cntNumRaspOn);
+          SerialDebugPrint("\n");          
         }     
     } 
      
