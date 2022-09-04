@@ -12,7 +12,7 @@ extern RTC_DS3231 rtc;
  * DateTime startTime = DateTime(2022, 8, 25, 02, 48, 00); is the time start to collect data
  * 
 */
-DateTime startTime = DateTime(2022, 8, 24, 20, 20, 00);
+DateTime startTime = DateTime(2022, 9, 4, 20, 20, 00);
 
 /*
  * onRaspDuration = TimeSpan(0, 0, 3, 0) means the Raspberry will stay ON for 3 minutes, then it is set to OFF
@@ -40,25 +40,31 @@ void initOnNewDay() {
 void SerialDebugPrint(String str){
 
   #ifdef SERIAL_DEBUG
+  Serial.print("DEBUG - ");
   Serial.print(str);
   #endif
-      
+
   }
 
 void SerialDebugPrint(const char* str){
   #ifdef SERIAL_DEBUG
+  if (strcmp(str, "\r\n") != 0 and strcmp(str, "\n\r") != 0) {
+    Serial.print("DEBUG - ");
+  }  
   Serial.print(str);
   #endif
   }
 
 void SerialDebugPrint(StringSumHelper& str){
     #ifdef SERIAL_DEBUG
+    Serial.print("DEBUG - ");
     Serial.print(str);
     #endif
   }
   
 void SerialDebugPrint(int num){
     #ifdef SERIAL_DEBUG
+    Serial.print("DEBUG - ");
     Serial.print(num);
     #endif
   }
@@ -66,21 +72,36 @@ void SerialDebugPrint(int num){
   
 void SerialDebugPrint(unsigned int num){
      #ifdef SERIAL_DEBUG
+     Serial.print("DEBUG - ");
     Serial.print(num);
     #endif
   }
   
 void SerialDebugPrint(char c){
   #ifdef SERIAL_DEBUG
+  Serial.print("DEBUG - ");
   Serial.print(c);
   #endif  
   }
 
 void SerialDebugPrint(bool boolVal){
   #ifdef SERIAL_DEBUG
+  Serial.print("DEBUG - ");
   Serial.print(boolVal);
   #endif  
   }
+
+void SerialReponse(char* buff ) {
+  Serial.print("R");
+  Serial.print(buff);
+  Serial.print("\r\n");
+}
+
+void SerialReponse(const char* buff ) {
+  Serial.print("R");
+  Serial.print(buff);
+  Serial.print("\r\n");
+}
 
 bool setHourAlarm1(uint8_t setHour, uint8_t setMinute) {
   DateTime _setStartTime = DateTime(startTime.year(), startTime.month(), startTime.day(), setHour, setMinute, 0);
@@ -104,7 +125,7 @@ void SerialReadCmdRoutine(){
     if (Serial.available() > 0) {
       String incomingStr = Serial.readString();
       incomingStr.trim();     
-      SerialDebugPrint(incomingStr);
+      //SerialDebugPrint(incomingStr);
 
       int cmd = incomingStr[0];
       int incomingStrLen = incomingStr.length();
@@ -132,9 +153,12 @@ void SerialReadCmdRoutine(){
             SerialDebugPrint(startHour);
             SerialDebugPrint(startMinute);
             SerialDebugPrint("\r\n");
+
+            SerialReponse("0");
             
           } else {
-              SerialDebugPrint("Invalid set StartTime command\r\n");        
+              SerialDebugPrint("Invalid set StartTime command\r\n");   
+              SerialReponse("1");     
           }
         
         break;
@@ -150,8 +174,10 @@ void SerialReadCmdRoutine(){
           SerialDebugPrint("Successfully set onRaspDuration = ");
           SerialDebugPrint(onMinutes);
           SerialDebugPrint("\r\n");
+          SerialReponse("0");
           } else {
-              SerialDebugPrint("Invalid set onRaspDuration command\r\n");      
+              SerialDebugPrint("Invalid set onRaspDuration command\r\n");    
+              SerialReponse("1");  
             }
             
         break;
@@ -159,10 +185,25 @@ void SerialReadCmdRoutine(){
         case 't':
         if (incomingStrLen == 1) {
           float f_temp = rtc.getTemperature();
-          String tempStr(f_temp);                    
+          String tempStr(f_temp, 1);                    
 
           SerialDebugPrint(tempStr);
           SerialDebugPrint("\r\n");
+
+          SerialReponse(tempStr.c_str());
+
+        }
+        break;
+
+        case 'i':
+        if (incomingStrLen == 1) {
+          float f_temp = rtc.getTemperature();  
+          String tempStr(f_temp, 1);        
+          char reponseBuff[50];
+          DateTime dt = rtc.now();
+          sprintf(reponseBuff, "%02d:%02d:%02d-%02d/%02d/%02d,%s,%02d:%02d,%02d",  
+          dt.hour(), dt.minute(), dt.second(), dt.day(), dt.month(), dt.year(), tempStr.c_str(), startTime.hour(), startTime.minute(), onRaspDuration.minutes());  
+          SerialReponse(reponseBuff);
 
         }
         break;

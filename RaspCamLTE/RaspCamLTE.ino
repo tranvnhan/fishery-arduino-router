@@ -90,10 +90,8 @@ void loop() {
 
           //Delay for routerOn, internet on
           while (cntWaitForRouterOn++ < WAITING_TIME_FOR_ROUTER) {
-            delay(1000);
-            SerialDebugPrint("Wait for the router ... ");
-            SerialDebugPrint(cntWaitForRouterOn);
-            SerialDebugPrint("\r\n");            
+            delay(1000);            
+            SerialDebugPrint("Wait for the router ... " + String(cntWaitForRouterOn) + "\r\n");      
           }
 
           digitalWrite(RaspPin, HIGH);
@@ -137,7 +135,7 @@ void onAlarm() {
     if(isRouterOn == false){
       isRouterOn = true; 
       digitalWrite(RouterPin, HIGH);
-      SerialDebugPrint("ON_Router Relay 1\n");    
+      SerialDebugPrint("ON_Router Relay 1\r\n");    
     }
     else
     {
@@ -145,16 +143,16 @@ void onAlarm() {
       if (isRaspOn)  {
           isRaspOn = false; 
           digitalWrite(RaspPin, LOW);
-          SerialDebugPrint("OFF_RaspPin Relay 2\n");          
+          SerialDebugPrint("OFF_RaspPin Relay 2\r\n");          
         }
       else {
           isRaspOn = true; 
           digitalWrite(RaspPin, HIGH);
-          SerialDebugPrint("ON_RaspPin Relay 2\n");   
+          SerialDebugPrint("ON_RaspPin Relay 2\r\n");   
           cntNumRaspOn++;
           SerialDebugPrint("NumRaspOn ");
           SerialDebugPrint(cntNumRaspOn);
-          SerialDebugPrint("\n");          
+          SerialDebugPrint("\r\n");          
         }     
     } 
      

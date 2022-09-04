@@ -18,6 +18,9 @@
   void SerialDebugPrint(char c);
   void SerialDebugPrint(bool);
 
+  void SerialReponse(char* buff );
+  void SerialReponse(const char* buff );
+
   void SerialReadCmdRoutine();
   
 
